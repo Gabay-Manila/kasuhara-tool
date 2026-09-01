@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>介護現場用 カスハラ判定・記録支援 / Customer Harassment Assessment Tool</title>
+<style>
+  :root {
+    --bg-color: #f4f6f8;
+    --card-bg: #ffffff;
+    --text-color: #2c3e50;
+    --border-color: #dcdde1;
+    --alert-blue: #2980b9;
+    --alert-yellow: #d35400;
+    --alert-red: #c0392b;
+    --alert-green: #27ae60;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    padding: 16px;
+    line-height: 1.5;
+  }
+  .container { max-width: 680px; margin: 0 auto; }
+  .card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 1.15rem; text-align: center; margin-bottom: 12px; }
+  h2 { font-size: 1rem; margin-bottom: 10px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px; }
+
+  /* Language toggle */
+  .lang-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .lang-btn {
+    flex: 0 0 auto;
+    min-width: 96px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: #fff;
+    color: var(--text-color);
+    cursor: pointer;
+  }
+  .lang-btn.active {
+    background: #2c3e50;
+    color: #fff;
+    border-color: #2c3e50;
+  }
+
+  /* Status Box */
+  .status-box {
+    text-align: center;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.05rem;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    background-color: var(--alert-green);
+    color: #fff;
+  }
+  .guide-box {
+    background-color: #f8f9fa;
+    border-left: 5px solid var(--alert-green);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* Checklist Styles */
+  .section-label {
+    font-weight: bold;
+    margin-top: 12px;
+    font-size: 0.86rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .label-red { background-color: #fceae8; color: var(--alert-red); }
+  .label-yellow { background-color: #fdf2e9; color: var(--alert-yellow); }
+  .label-blue { background-color: #eaf2f8; color: var(--alert-blue); }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-size: 0.92rem;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input {
+    margin-top: 3px;
+    margin-right: 12px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  /* Form Elements */
+  .form-group { margin-bottom: 12px; }
+  label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; }
+  input[type="text"], input[type="datetime-local"], select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* Actions */
+  .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+  button {
+    flex: 1;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  button:active { opacity: 0.8; }
+  .btn-primary { background: #2c3e50; color: #fff; }
+  .btn-secondary { background: #95a5a6; color: #fff; }
+
+  .output-area {
+    white-space: pre-wrap;
+    background: #fdfdfd;
+    border: 1px dashed #bdc3c7;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="lang-toggle" role="group" aria-label="Language / 言語">
+    <button type="button" class="lang-btn" id="langBtnJa" onclick="setLanguage('ja')">日本語</button>
+    <button type="button" class="lang-btn" id="langBtnEn" onclick="setLanguage('en')">English</button>
+  </div>
+
+  <div class="card">
+    <h1 id="pageTitle"></h1>
+    <div id="statusBadge" class="status-box"></div>
+    <div id="actionGuide" class="guide-box"></div>
+  </div>
+
+  <!-- Checklist Section -->
+  <div class="card">
+    <h2 id="checklistTitle"></h2>
+
+    <div class="section-label label-red" id="labelRed"></div>
+    <div id="groupRed"></div>
+
+    <div class="section-label label-yellow" id="labelYellow"></div>
+    <div id="groupYellow"></div>
+
+    <div class="section-label label-blue" id="labelBlue"></div>
+    <div id="groupBlue"></div>
+  </div>
+
+  <!-- Incident Details Form -->
+  <div class="card">
+    <h2 id="formTitle"></h2>
+
+    <div class="form-group">
+      <label id="labelTime" for="incidentTime"></label>
+      <input type="datetime-local" id="incidentTime">
+    </div>
+
+    <div class="form-group">
+      <label id="labelLocation" for="location"></label>
+      <select id="location"></select>
+    </div>
+
+    <div class="form-group">
+      <label id="labelTarget" for="targetPerson"></label>
+      <input type="text" id="targetPerson">
+    </div>
+
+    <div class="form-group">
+      <label id="labelStaff" for="staffNames"></label>
+      <input type="text" id="staffNames">
+    </div>
+
+    <div class="form-group">
+      <label id="labelDetails" for="details"></label>
+      <textarea id="details"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label id="labelEvidence" for="evidence"></label>
+      <input type="text" id="evidence">
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" id="btnGenerate" onclick="generateReport()"></button>
+      <button class="btn-secondary" id="btnReset" onclick="resetForm()"></button>
+    </div>
+
+    <div id="outputContainer" style="display:none; margin-top:16px;">
+      <label id="labelOutput"></label>
+      <div id="output" class="output-area"></div>
+      <button class="btn-primary" style="margin-top:8px; width:100%;" id="btnCopy" onclick="copyToClipboard()"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------
+  // Data: checklist items (id, alert level, ja/en text)
+  // ---------------------------------------------------------------
+  const CHECK_ITEMS = [
+    { id: 'red1',    alert: 'red',    ja: '暴力（叩く・蹴る・胸ぐらを掴む・物を投げる等）',            en: 'Violence (hitting, kicking, grabbing collar, throwing objects, etc.)' },
+    { id: 'red2',    alert: 'red',    ja: '脅迫・威嚇（「殺す」「施設を潰す」等の発言）',                en: 'Threats / intimidation (e.g. "I\u2019ll kill you," "I\u2019ll shut this place down")' },
+    { id: 'red3',    alert: 'red',    ja: '性的ハラスメント（体を触る・性器露出等）',                    en: 'Sexual harassment (touching the body, exposure, etc.)' },
+    { id: 'red4',    alert: 'red',    ja: '意図的な施設・備品の破損',                                    en: 'Intentional damage to facility / equipment' },
+    { id: 'yellow1', alert: 'yellow', ja: '人格否定・侮辱的発言（「バカ」「無能」等）',                  en: 'Personal insults / demeaning language ("idiot," "incompetent," etc.)' },
+    { id: 'yellow2', alert: 'yellow', ja: '土下座や契約外サービスの強要',                                en: 'Forcing a dogeza apology or services outside the contract' },
+    { id: 'yellow3', alert: 'yellow', ja: '無断撮影・SNS投稿等の威嚇',                                    en: 'Unauthorized filming / threatening to post on social media' },
+    { id: 'yellow4', alert: 'yellow', ja: '職員個人のプライバシー侵害・連絡先の強要',                    en: 'Violating staff members\u2019 personal privacy / forcing them to give contact info' },
+    { id: 'blue1',   alert: 'blue',   ja: '20分以上の執拗な拘束・同一主張の反復',                        en: 'Persistent restraint for 20+ minutes / repeating the same demand' },
+    { id: 'blue2',   alert: 'blue',   ja: '退去指示の無視・居座り・退出妨害',                            en: 'Ignoring requests to leave / refusing to leave / obstructing departure' },
+    { id: 'blue3',   alert: 'blue',   ja: '連続電話による通常業務の妨害',                                en: 'Obstructing normal operations with repeated phone calls' }
+  ];
+
+  const LOCATIONS = [
+    { ja: '施設内（フロア・居室）',   en: 'On-site (floor / resident room)' },
+    { ja: '利用者居宅（訪問）',       en: "Client's home (home visit)" },
+    { ja: '電話窓口',                 en: 'Phone line' },
+    { ja: 'その他',                   en: 'Other' }
+  ];
+
+  const I18N = {
+    ja: {
+      htmlLang: 'ja',
+      pageTitle: '介護現場用 カスハラ判定・記録支援',
+      checklistTitle: '1. 客観的事実チェック',
+      formTitle: '2. 事実記録（5W1H）',
+      labelRed: '■ レッド（危険・犯罪行為）：即時避難・警察通報',
+      labelYellow: '■ イエロー（悪質・過大要求）：対応拒否・即時中断',
+      labelBlue: '■ ブルー（拘束・業務妨害）：複数対応・時間制限',
+      labelTime: '発生日時',
+      labelLocation: '発生場所',
+      labelTarget: '相手（利用者氏名 / 家族氏名・続柄）',
+      targetPlaceholder: '例: 利用者 山田太郎氏の長男',
+      labelStaff: '対応職員（担当者 / 同席者）',
+      staffPlaceholder: '例: 介護職 佐藤（同席: 管理者 鈴木）',
+      labelDetails: '発言・行動の具体的内容（客観的事実のみ記載）',
+      detailsPlaceholder: '「」を用いて発言通りに記載。例: 『バカ野郎、言う通りにしろ』と大声で怒鳴り、机を拳で3回叩いた。',
+      labelEvidence: '客観的証拠',
+      evidencePlaceholder: '例: 通話録音データ保全、防犯カメラ映像、破損箇所の写真',
+      btnGenerate: '報告テキストを生成',
+      btnReset: 'リセット',
+      labelOutput: '生成された報告フォーマット（コピー用）',
+      btnCopy: 'クリップボードにコピー',
+      copySuccess: '報告テキストをクリップボードにコピーしました。',
+      copyFail: 'コピーに失敗しました。',
+      badge: {
+        green: '判定：グリーン（通常対応）',
+        red: '判定：レッド【即時通報・緊急避難】',
+        yellow: '判定：イエロー【対応拒否・即時中断】',
+        blue: '判定：ブルー【複数対応・時間制限】'
+      },
+      guide: {
+        green: '客観的事実に基づき、通常のケア・相談対応を継続してください。',
+        red: '<strong>【緊急避難・通報手順】</strong><br>1. 職員の安全確保を最優先とし、直ちにその場から退避する。<br>2. 躊躇せず<strong>110番通報</strong>を行う。<br>3. 防犯カメラ・録音等の証拠を保全し、管理者・弁護士へ連絡する。',
+        yellow: '<strong>【毅然とした拒否手順】</strong><br>1. 「契約外の要求はお受けできません」「暴言には対応できません」と明確に通告。<br>2. 行為が止まらない場合は即座に対応を打ち切る（退室・通話切断）。<br>3. 直ちに管理者・担当ケアマネジャーへ報告・情報共有を行う。',
+        blue: '<strong>【組織対応への切り替え手順】</strong><br>1. 1対1の密室対応を中止し、2名以上の体制または管理者が同席する。<br>2. 「〇分で終了します」と終了時刻をあらかじめ通告する。<br>3. 「正確を期すため記録・録音します」と告知して記録を開始する。'
+      },
+      reportPrefix: { red: '[レッド]', yellow: '[イエロー]', blue: '[ブルー]' },
+      report: {
+        title: '【カスハラ事案 記録・報告書】',
+        divider: '----------------------------------------',
+        judgement: '■ 判定結果',
+        items: '■ 該当項目',
+        none: '・該当なし（通常対応）',
+        time: '■ 発生日時',
+        location: '■ 発生場所',
+        target: '■ 相手',
+        staff: '■ 対応職員',
+        details: '■ 言動・状況の詳細（客観的事実のみ）',
+        evidence: '■ 客観的証拠',
+        unfilled: '未入力',
+        evidenceNone: 'なし',
+        generatedAt: '報告作成日時'
+      }
+    },
+    en: {
+      htmlLang: 'en',
+      pageTitle: 'Customer Harassment Assessment & Reporting Tool (Care Settings)',
+      checklistTitle: '1. Objective Fact Checklist',
+      formTitle: '2. Incident Record (5W1H)',
+      labelRed: '\u25a0 RED (Danger / Criminal act): Evacuate immediately, call police',
+      labelYellow: '\u25a0 YELLOW (Malicious / Excessive demand): Refuse and end response immediately',
+      labelBlue: '\u25a0 BLUE (Restraint / Business obstruction): Respond in pairs, set a time limit',
+      labelTime: 'Date & Time of Incident',
+      labelLocation: 'Location',
+      labelTarget: "Other Party (resident's name / family member's name & relation)",
+      targetPlaceholder: 'e.g. Eldest son of resident Taro Yamada',
+      labelStaff: 'Staff Involved (staff member / person present)',
+      staffPlaceholder: 'e.g. Care worker Sato (present: Manager Suzuki)',
+      labelDetails: 'Specific Words / Actions (objective facts only)',
+      detailsPlaceholder: 'Quote exact words in quotation marks. e.g. Shouted "You idiot, do as I say" and struck the desk with a fist three times.',
+      labelEvidence: 'Objective Evidence',
+      evidencePlaceholder: 'e.g. Call recording preserved, security camera footage, photos of damage',
+      btnGenerate: 'Generate Report Text',
+      btnReset: 'Reset',
+      labelOutput: 'Generated Report Format (for copying)',
+      btnCopy: 'Copy to Clipboard',
+      copySuccess: 'Report text copied to clipboard.',
+      copyFail: 'Copy failed.',
+      badge: {
+        green: 'Status: GREEN (Normal response)',
+        red: 'Status: RED [Report immediately / Evacuate now]',
+        yellow: 'Status: YELLOW [Refuse and end response]',
+        blue: 'Status: BLUE [Respond in pairs / Time limit]'
+      },
+      guide: {
+        green: 'Continue normal care and consultation based on the objective facts.',
+        red: '<strong>[Emergency Evacuation / Reporting Steps]</strong><br>1. Prioritize staff safety and withdraw from the scene immediately.<br>2. Call the police (<strong>110</strong>) without hesitation.<br>3. Preserve security camera footage / recordings as evidence and contact the manager and lawyer.',
+        yellow: '<strong>[Firm Refusal Steps]</strong><br>1. State clearly: "We cannot accept requests outside the contract" / "We cannot respond to abusive language."<br>2. If the behavior does not stop, end the interaction immediately (leave the room / hang up).<br>3. Report to the manager and care manager in charge immediately.',
+        blue: '<strong>[Switch to Organizational Response]</strong><br>1. Stop one-on-one closed-room responses; have two or more staff, or a manager, present.<br>2. Announce a set end time in advance, e.g. "This will end in __ minutes."<br>3. State "We will record this for accuracy" and begin recording.'
+      },
+      reportPrefix: { red: '[RED]', yellow: '[YELLOW]', blue: '[BLUE]' },
+      report: {
+        title: '[Customer Harassment Incident Record / Report]',
+        divider: '----------------------------------------',
+        judgement: '\u25a0 Assessment Result',
+        items: '\u25a0 Applicable Items',
+        none: '\u30fbNone applicable (normal response)',
+        time: '\u25a0 Date & Time',
+        location: '\u25a0 Location',
+        target: '\u25a0 Other Party',
+        staff: '\u25a0 Staff Involved',
+        details: '\u25a0 Details of Words / Situation (objective facts only)',
+        evidence: '\u25a0 Objective Evidence',
+        unfilled: 'Not entered',
+        evidenceNone: 'None',
+        generatedAt: 'Report generated at'
+      }
+    }
+  };
+
+  let currentLang = 'ja';
+  const checkedState = {}; // id -> boolean
+
+  function t() { return I18N[currentLang]; }
+
+  // ---------------------------------------------------------------
+  // Rendering
+  // ---------------------------------------------------------------
+  function renderChecklistGroup(containerId, alertType) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    CHECK_ITEMS.filter(item => item.alert === alertType).forEach(item => {
+      const label = document.createElement('label');
+      label.className = 'check-item';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.className = 'chk';
+      input.dataset.id = item.id;
+      input.dataset.alert = item.alert;
+      input.checked = !!checkedState[item.id];
+      input.addEventListener('change', () => {
+        checkedState[item.id] = input.checked;
+        evaluateAlertLevel();
+      });
+
+      const span = document.createElement('span');
+      span.textContent = item[currentLang];
+
+      label.appendChild(input);
+      label.appendChild(span);
+      container.appendChild(label);
+    });
+  }
+
+  function renderStaticText() {
+    const s = t();
+    document.documentElement.lang = s.htmlLang;
+    document.title = s.pageTitle;
+    document.getElementById('pageTitle').textContent = s.pageTitle;
+    document.getElementById('checklistTitle').textContent = s.checklistTitle;
+    document.getElementById('formTitle').textContent = s.formTitle;
+    document.getElementById('labelRed').textContent = s.labelRed;
+    document.getElementById('labelYellow').textContent = s.labelYellow;
+    document.getElementById('labelBlue').textContent = s.labelBlue;
+
+    document.getElementById('labelTime').textContent = s.labelTime;
+    document.getElementById('labelLocation').textContent = s.labelLocation;
+    document.getElementById('labelTarget').textContent = s.labelTarget;
+    document.getElementById('targetPerson').placeholder = s.targetPlaceholder;
+    document.getElementById('labelStaff').textContent = s.labelStaff;
+    document.getElementById('staffNames').placeholder = s.staffPlaceholder;
+    document.getElementById('labelDetails').textContent = s.labelDetails;
+    document.getElementById('details').placeholder = s.detailsPlaceholder;
+    document.getElementById('labelEvidence').textContent = s.labelEvidence;
+    document.getElementById('evidence').placeholder = s.evidencePlaceholder;
+
+    document.getElementById('btnGenerate').textContent = s.btnGenerate;
+    document.getElementById('btnReset').textContent = s.btnReset;
+    document.getElementById('labelOutput').textContent = s.labelOutput;
+    document.getElementById('btnCopy').textContent = s.btnCopy;
+
+    // location select — preserve selected index across languages
+    const locationSelect = document.getElementById('location');
+    const prevIndex = locationSelect.selectedIndex >= 0 ? locationSelect.selectedIndex : 0;
+    locationSelect.innerHTML = '';
+    LOCATIONS.forEach(loc => {
+      const opt = document.createElement('option');
+      opt.value = loc[currentLang];
+      opt.textContent = loc[currentLang];
+      locationSelect.appendChild(opt);
+    });
+    locationSelect.selectedIndex = prevIndex;
+
+    document.getElementById('langBtnJa').classList.toggle('active', currentLang === 'ja');
+    document.getElementById('langBtnEn').classList.toggle('active', currentLang === 'en');
+  }
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    renderStaticText();
+    renderChecklistGroup('groupRed', 'red');
+    renderChecklistGroup('groupYellow', 'yellow');
+    renderChecklistGroup('groupBlue', 'blue');
+    evaluateAlertLevel();
+  }
+
+  // ---------------------------------------------------------------
+  // Alert level logic
+  // ---------------------------------------------------------------
+  function evaluateAlertLevel() {
+    let alertType = 'green';
+
+    // 優先度判定: red > yellow > blue
+    CHECK_ITEMS.forEach(item => {
+      if (checkedState[item.id]) {
+        if (item.alert === 'red') {
+          alertType = 'red';
+        } else if (item.alert === 'yellow' && alertType !== 'red') {
+          alertType = 'yellow';
+        } else if (item.alert === 'blue' && alertType !== 'red' && alertType !== 'yellow') {
+          alertType = 'blue';
+        }
+      }
+    });
+
+    const s = t();
+    const badge = document.getElementById('statusBadge');
+    const guide = document.getElementById('actionGuide');
+    const colorVar = {
+      red: 'var(--alert-red)',
+      yellow: 'var(--alert-yellow)',
+      blue: 'var(--alert-blue)',
+      green: 'var(--alert-green)'
+    }[alertType];
+
+    badge.textContent = s.badge[alertType];
+    badge.style.backgroundColor = colorVar;
+    guide.style.borderLeftColor = colorVar;
+    guide.innerHTML = s.guide[alertType];
+  }
+
+  // ---------------------------------------------------------------
+  // Report generation
+  // ---------------------------------------------------------------
+  function generateReport() {
+    const s = t();
+    const timeVal = document.getElementById('incidentTime').value;
+    const locationVal = document.getElementById('location').value;
+    const targetVal = document.getElementById('targetPerson').value || s.report.unfilled;
+    const staffVal = document.getElementById('staffNames').value || s.report.unfilled;
+    const detailsVal = document.getElementById('details').value || s.report.unfilled;
+    const evidenceVal = document.getElementById('evidence').value || s.report.evidenceNone;
+
+    const selectedRisks = CHECK_ITEMS
+      .filter(item => checkedState[item.id])
+      .map(item => `\u30fb${s.reportPrefix[item.alert]} ${item[currentLang]}`);
+
+    const badgeText = document.getElementById('statusBadge').textContent;
+
+    const reportText =
+`${s.report.title}
+${s.report.divider}
+${s.report.judgement}: ${badgeText}
+${s.report.items}:
+${selectedRisks.length > 0 ? selectedRisks.join('\n') : s.report.none}
+
+${s.report.time}: ${timeVal.replace('T', ' ')}
+${s.report.location}: ${locationVal}
+${s.report.target}: ${targetVal}
+${s.report.staff}: ${staffVal}
+
+${s.report.details}:
+${detailsVal}
+
+${s.report.evidence}:
+${evidenceVal}
+${s.report.divider}
+${s.report.generatedAt}: ${new Date().toLocaleString(currentLang === 'ja' ? 'ja-JP' : 'en-US')}`;
+
+    document.getElementById('output').textContent = reportText;
+    document.getElementById('outputContainer').style.display = 'block';
+  }
+
+  function copyToClipboard() {
+    const s = t();
+    const text = document.getElementById('output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      alert(s.copySuccess);
+    }).catch(err => {
+      alert(s.copyFail);
+    });
+  }
+
+  function resetForm() {
+    Object.keys(checkedState).forEach(id => { checkedState[id] = false; });
+    renderChecklistGroup('groupRed', 'red');
+    renderChecklistGroup('groupYellow', 'yellow');
+    renderChecklistGroup('groupBlue', 'blue');
+    evaluateAlertLevel();
+    document.getElementById('targetPerson').value = '';
+    document.getElementById('staffNames').value = '';
+    document.getElementById('details').value = '';
+    document.getElementById('evidence').value = '';
+    document.getElementById('outputContainer').style.display = 'none';
+  }
+
+  // ---------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------
+  window.onload = function() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('incidentTime').value = now.toISOString().slice(0, 16);
+    setLanguage('ja');
+  };
+</script>
+
+</body>
+</html>
