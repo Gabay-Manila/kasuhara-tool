@@ -139,6 +139,33 @@
   .btn-primary { background: #2c3e50; color: #fff; }
   .btn-secondary { background: #95a5a6; color: #fff; }
 
+  .file-list {
+    margin-top: 6px;
+    font-size: 0.82rem;
+  }
+  .file-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  .file-list-item button {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    background: #e0e0e0;
+    color: #2c3e50;
+    border-radius: 4px;
+  }
+  .hint-text {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+    margin-top: 4px;
+  }
+
   .output-area {
     white-space: pre-wrap;
     background: #fdfdfd;
@@ -214,6 +241,13 @@
       <input type="text" id="evidence">
     </div>
 
+    <div class="form-group">
+      <label id="labelEvidenceFiles" for="evidenceFiles"></label>
+      <input type="file" id="evidenceFiles" accept="image/*,audio/*,video/*" multiple>
+      <div id="evidenceFilesList" class="file-list"></div>
+      <p id="evidenceFilesHint" class="hint-text"></p>
+    </div>
+
     <div class="btn-group">
       <button class="btn-primary" id="btnGenerate" onclick="generateReport()"></button>
       <button class="btn-secondary" id="btnReset" onclick="resetForm()"></button>
@@ -222,7 +256,11 @@
     <div id="outputContainer" style="display:none; margin-top:16px;">
       <label id="labelOutput"></label>
       <div id="output" class="output-area"></div>
-      <button class="btn-primary" style="margin-top:8px; width:100%;" id="btnCopy" onclick="copyToClipboard()"></button>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn-primary" id="btnCopy" onclick="copyToClipboard()"></button>
+        <button class="btn-primary" id="btnShare" onclick="shareReport()" style="display:none;"></button>
+      </div>
+      <p id="shareUnsupportedNote" class="hint-text" style="display:none;"></p>
     </div>
   </div>
 </div>
@@ -271,12 +309,18 @@
       detailsPlaceholder: '「」を用いて発言通りに記載。例: 『バカ野郎、言う通りにしろ』と大声で怒鳴り、机を拳で3回叩いた。',
       labelEvidence: '客観的証拠',
       evidencePlaceholder: '例: 通話録音データ保全、防犯カメラ映像、破損箇所の写真',
+      labelEvidenceFiles: '証拠ファイル（写真・録音・動画）を選択',
+      evidenceFilesHint: '端末に保存済みの写真・録音・動画を選択できます。ここで選んだファイルは保存・送信されず、「証拠を添付して共有」を押したときだけ共有シートに渡されます。',
+      removeFile: '削除',
       btnGenerate: '報告テキストを生成',
       btnReset: 'リセット',
       labelOutput: '生成された報告フォーマット（コピー用）',
       btnCopy: 'クリップボードにコピー',
+      btnShare: '証拠を添付して共有',
       copySuccess: '報告テキストをクリップボードにコピーしました。',
       copyFail: 'コピーに失敗しました。',
+      shareFail: '共有に失敗しました。コピーしてご利用ください。',
+      shareUnsupportedNote: 'このブラウザは証拠ファイルの共有に対応していません。上の「クリップボードにコピー」で報告テキストをコピーし、写真・録音は別途手動で添付してください。',
       badge: {
         green: '判定：グリーン（通常対応）',
         red: '判定：レッド【即時通報・緊急避難】',
@@ -325,12 +369,18 @@
       detailsPlaceholder: 'Quote exact words in quotation marks. e.g. Shouted "You idiot, do as I say" and struck the desk with a fist three times.',
       labelEvidence: 'Objective Evidence',
       evidencePlaceholder: 'e.g. Call recording preserved, security camera footage, photos of damage',
+      labelEvidenceFiles: 'Select evidence files (photo / audio / video)',
+      evidenceFilesHint: 'Choose photos, recordings, or video already saved on this device. Files chosen here are not stored or sent anywhere until you tap "Share with evidence attached."',
+      removeFile: 'Remove',
       btnGenerate: 'Generate Report Text',
       btnReset: 'Reset',
       labelOutput: 'Generated Report Format (for copying)',
       btnCopy: 'Copy to Clipboard',
+      btnShare: 'Share with Evidence Attached',
       copySuccess: 'Report text copied to clipboard.',
       copyFail: 'Copy failed.',
+      shareFail: 'Sharing failed. Please use Copy to Clipboard instead.',
+      shareUnsupportedNote: 'This browser cannot share evidence files. Use "Copy to Clipboard" above for the report text, and attach photos or recordings separately by hand.',
       badge: {
         green: 'Status: GREEN (Normal response)',
         red: 'Status: RED [Report immediately / Evacuate now]',
@@ -365,6 +415,7 @@
 
   let currentLang = 'ja';
   const checkedState = {}; // id -> boolean
+  let evidenceFiles = []; // File objects selected by the user, in-memory only
 
   function t() { return I18N[currentLang]; }
 
@@ -419,11 +470,16 @@
     document.getElementById('details').placeholder = s.detailsPlaceholder;
     document.getElementById('labelEvidence').textContent = s.labelEvidence;
     document.getElementById('evidence').placeholder = s.evidencePlaceholder;
+    document.getElementById('labelEvidenceFiles').textContent = s.labelEvidenceFiles;
+    document.getElementById('evidenceFilesHint').textContent = s.evidenceFilesHint;
 
     document.getElementById('btnGenerate').textContent = s.btnGenerate;
     document.getElementById('btnReset').textContent = s.btnReset;
     document.getElementById('labelOutput').textContent = s.labelOutput;
     document.getElementById('btnCopy').textContent = s.btnCopy;
+    document.getElementById('btnShare').textContent = s.btnShare;
+    document.getElementById('shareUnsupportedNote').textContent = s.shareUnsupportedNote;
+    renderEvidenceFileList();
 
     // location select — preserve selected index across languages
     const locationSelect = document.getElementById('location');
@@ -537,6 +593,56 @@ ${s.report.generatedAt}: ${new Date().toLocaleString(currentLang === 'ja' ? 'ja-
     });
   }
 
+  // ---------------------------------------------------------------
+  // Evidence files (photo / audio / video) — in-memory only,
+  // handed to the OS share sheet together with the report text.
+  // ---------------------------------------------------------------
+  function renderEvidenceFileList() {
+    const s = t();
+    const list = document.getElementById('evidenceFilesList');
+    list.innerHTML = '';
+    evidenceFiles.forEach((file, index) => {
+      const row = document.createElement('div');
+      row.className = 'file-list-item';
+
+      const name = document.createElement('span');
+      name.textContent = file.name;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = s.removeFile;
+      removeBtn.addEventListener('click', () => {
+        evidenceFiles.splice(index, 1);
+        renderEvidenceFileList();
+      });
+
+      row.appendChild(name);
+      row.appendChild(removeBtn);
+      list.appendChild(row);
+    });
+  }
+
+  async function shareReport() {
+    const s = t();
+    const text = document.getElementById('output').textContent;
+    try {
+      const shareData = { text };
+      if (evidenceFiles.length > 0 && navigator.canShare && navigator.canShare({ files: evidenceFiles })) {
+        shareData.files = evidenceFiles;
+      }
+      await navigator.share(shareData);
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // user cancelled the share sheet
+      alert(s.shareFail);
+    }
+  }
+
+  function updateShareButtonVisibility() {
+    const shareSupported = !!navigator.share;
+    document.getElementById('btnShare').style.display = shareSupported ? 'block' : 'none';
+    document.getElementById('shareUnsupportedNote').style.display = shareSupported ? 'none' : 'block';
+  }
+
   function resetForm() {
     Object.keys(checkedState).forEach(id => { checkedState[id] = false; });
     renderChecklistGroup('groupRed', 'red');
@@ -547,6 +653,9 @@ ${s.report.generatedAt}: ${new Date().toLocaleString(currentLang === 'ja' ? 'ja-
     document.getElementById('staffNames').value = '';
     document.getElementById('details').value = '';
     document.getElementById('evidence').value = '';
+    document.getElementById('evidenceFiles').value = '';
+    evidenceFiles = [];
+    renderEvidenceFileList();
     document.getElementById('outputContainer').style.display = 'none';
   }
 
@@ -557,6 +666,14 @@ ${s.report.generatedAt}: ${new Date().toLocaleString(currentLang === 'ja' ? 'ja-
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('incidentTime').value = now.toISOString().slice(0, 16);
+
+    document.getElementById('evidenceFiles').addEventListener('change', (e) => {
+      evidenceFiles = evidenceFiles.concat(Array.from(e.target.files));
+      e.target.value = ''; // allow re-selecting the same file later
+      renderEvidenceFileList();
+    });
+
+    updateShareButtonVisibility();
     setLanguage('ja');
   };
 </script>
